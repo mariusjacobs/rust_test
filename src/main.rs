@@ -1,44 +1,49 @@
-#![feature(decl_macro, proc_macro_hygiene)]
+use juniper::{
+    tests::fixtures::starwars::schema::{Database, Query},
+    EmptyMutation, EmptySubscription, RootNode,
+};
+use rocket::{response::content, Rocket, State};
 
-use rocket::response::content;
-use rocket::State;
-
-use juniper::tests::model::Database;
-use juniper::tests::schema::Query;
-use juniper::{EmptyMutation, RootNode};
-
-type Schema = RootNode<'static, Query, EmptyMutation<Database>>;
+type Schema = RootNode<'static, Query, EmptyMutation<Database>, EmptySubscription<Database>>;
 
 #[rocket::get("/")]
 fn graphiql() -> content::Html<String> {
-    juniper_rocket::playground_source("/graphql")
+    // juniper_rocket::graphiql_source("/graphql", None)
+    juniper_rocket::playground_source("/graphql", None)
 }
 
 #[rocket::get("/graphql?<request>")]
 fn get_graphql_handler(
-    context: State<Database>,
+    context: &State<Database>,
     request: juniper_rocket::GraphQLRequest,
-    schema: State<Schema>,
+    schema: &State<Schema>,
 ) -> juniper_rocket::GraphQLResponse {
-    request.execute(&schema, &context)
+    request.execute_sync(&*schema, &*context)
 }
 
 #[rocket::post("/graphql", data = "<request>")]
 fn post_graphql_handler(
-    context: State<Database>,
+    context: &State<Database>,
     request: juniper_rocket::GraphQLRequest,
-    schema: State<Schema>,
+    schema: &State<Schema>,
 ) -> juniper_rocket::GraphQLResponse {
-    request.execute(&schema, &context)
+    request.execute_sync(&*schema, &*context)
 }
 
-fn main() {
-    rocket::ignite()
+#[rocket::main]
+async fn main() {
+    Rocket::build()
         .manage(Database::new())
-        .manage(Schema::new(Query, EmptyMutation::<Database>::new()))
+        .manage(Schema::new(
+            Query,
+            EmptyMutation::<Database>::new(),
+            EmptySubscription::<Database>::new(),
+        ))
         .mount(
             "/",
             rocket::routes![graphiql, get_graphql_handler, post_graphql_handler],
         )
-        .launch();
+        .launch()
+        .await
+        .expect("server to launch");
 }
