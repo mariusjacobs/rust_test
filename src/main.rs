@@ -1,7 +1,6 @@
-use juniper::{
-    tests::fixtures::starwars::schema::{Database, Query},
-    EmptyMutation, EmptySubscription, RootNode,
-};
+mod schema;
+use schema::{Database, Query};
+use juniper::{EmptyMutation, EmptySubscription, RootNode};
 use rocket::{response::content, Rocket, State};
 
 type Schema = RootNode<'static, Query, EmptyMutation<Database>, EmptySubscription<Database>>;
