@@ -23,3 +23,4 @@ query {
 ## Deployment
 
 See the guide at https://render.com/docs/deploy-rust-graphql.
+test
